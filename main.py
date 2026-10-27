@@ -1,1066 +1,128 @@
-
 import streamlit as st
 import streamlit.components.v1 as components
 
-# ==========================================
-# 1. 페이지 설정
-# ==========================================
-st.set_page_config(
-    page_title="알록달록! 쓰레기 구조대",
-    page_icon="🧃",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="알록달록! 쓰레기 분류 게임", page_icon="🩷", layout="wide")
 
-st.markdown("""
-<style>
-#MainMenu, footer, header {visibility:hidden;}
-.stApp {background:#72d8f5;}
-.block-container {
-    padding:0 !important;
-    max-width:100% !important;
-}
-iframe {border:0 !important; width:100% !important;}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ==========================================
-# 2. 게임 전체 화면
-# ==========================================
 html = r"""
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-* { box-sizing:border-box; }
-
-:root {
-    --ink:#493052;
-    --blue:#1688ee;
-    --blue-dark:#0757b2;
-    --cream:#fff8d9;
-    --outline:4px solid var(--ink);
-}
-
-body {
-    margin:0;
-    font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
-    color:var(--ink);
-    background:#72d8f5;
-    user-select:none;
-    -webkit-user-select:none;
-}
-
-button {font-family:inherit; cursor:pointer;}
-
-#game {
-    width:100%;
-    min-height:790px;
-    overflow:hidden;
-    position:relative;
-    background:
-      radial-gradient(circle at 12% 18%,#fff8c9 0 3px,transparent 4px),
-      radial-gradient(circle at 88% 27%,#fff8c9 0 3px,transparent 4px),
-      linear-gradient(#4fc8f4 0%,#a7edff 48%,#9be66f 48%,#55c96b 100%);
-    background-size:43px 43px,57px 57px,100% 100%;
-}
-
-#game::before {
-    content:"";
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    background:repeating-linear-gradient(
-      0deg,transparent 0 4px,rgba(36,81,117,.035) 4px 5px
-    );
-    z-index:80;
-}
-
-.screen {
-    display:none;
-    min-height:790px;
-    padding:18px 18px 22px;
-    position:relative;
-    z-index:1;
-}
-
-.screen.active {display:flex; flex-direction:column; align-items:center;}
-
-/* ===== 공통 레트로 게임 제목 ===== */
-.logo {
-    text-align:center;
-    font-size:clamp(28px,5vw,49px);
-    font-weight:1000;
-    letter-spacing:-2px;
-    line-height:1.25;
-    color:#fff;
-    -webkit-text-stroke:1px #573b69;
-    text-shadow:
-      3px 3px 0 #573b69,
-      6px 6px 0 #2367ac,
-      8px 9px 0 rgba(38,67,95,.2);
-    margin:8px 0 5px;
-}
-
-.logo .rainbow {
-    color:#ffec66;
-    -webkit-text-stroke:1px #8a482a;
-    text-shadow:
-      3px 3px 0 #8a482a,
-      6px 6px 0 #e56a38,
-      8px 9px 0 rgba(38,67,95,.2);
-}
-
-.tagline {
-    display:inline-block;
-    background:#fff;
-    border:3px solid var(--ink);
-    border-radius:13px;
-    padding:8px 17px;
-    font-size:14px;
-    font-weight:900;
-    box-shadow:4px 4px 0 var(--ink);
-    text-align:center;
-    line-height:1.6;
-}
-
-/* ===== 첫 화면 ===== */
-#start-screen {
-    justify-content:flex-start;
-    padding-top:22px;
-}
-
-.start-mascot {
-    font-size:clamp(55px,10vw,90px);
-    text-align:center;
-    line-height:1.1;
-    margin:8px 0 0;
-    filter:drop-shadow(4px 5px 0 rgba(67,60,94,.2));
-    animation:bob 1.8s ease-in-out infinite;
-}
-
-@keyframes bob {
-    0%,100% {transform:translateY(0);}
-    50% {transform:translateY(-7px);}
-}
-
-.start-card {
-    width:min(100%,640px);
-    margin:20px auto 0;
-    padding:20px 16px;
-    border:4px solid var(--ink);
-    border-radius:20px;
-    background:var(--cream);
-    box-shadow:0 7px 0 var(--ink),0 13px 0 rgba(255,255,255,.5);
-    text-align:center;
-    position:relative;
-}
-
-.start-card::before {
-    content:"★ TODAY'S MISSION ★";
-    display:inline-block;
-    background:#ffcf52;
-    border:3px solid var(--ink);
-    border-radius:8px;
-    padding:6px 13px;
-    font-size:12px;
-    font-weight:1000;
-    margin-top:-38px;
-    margin-bottom:12px;
-    box-shadow:3px 3px 0 var(--ink);
-}
-
-.start-description {
-    font-size:15px;
-    line-height:1.8;
-    font-weight:900;
-    margin:5px 0 15px;
-}
-
-.intro-bins {
-    display:flex;
-    justify-content:center;
-    align-items:flex-end;
-    gap:clamp(10px,4vw,35px);
-    margin:18px 0 23px;
-}
-
-.bin {
-    width:clamp(82px,22vw,133px);
-    height:clamp(113px,24vw,150px);
-    border:4px solid var(--ink);
-    border-radius:12px 12px 20px 20px;
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:1000;
-    font-size:clamp(15px,2.7vw,21px);
-    line-height:1.5;
-    text-shadow:2px 2px 0 rgba(73,48,82,.35);
-    box-shadow:0 7px 0 var(--ink);
-}
-
-.bin::before {
-    content:"";
-    position:absolute;
-    left:-7px;
-    right:-7px;
-    top:-12px;
-    height:17px;
-    border:4px solid var(--ink);
-    border-radius:8px;
-    background:inherit;
-}
-
-.bin::after {
-    content:"";
-    position:absolute;
-    left:11px;
-    top:18px;
-    bottom:12px;
-    width:5px;
-    border-radius:5px;
-    background:rgba(255,255,255,.27);
-}
-
-.red {background:#f24d61;}
-.yellow {background:#ffca35;}
-.green {background:#23bd79;}
-
-.bin-emoji {font-size:30px; margin-bottom:4px;}
-
-.start-button {
-    width:min(100%,330px);
-    border:4px solid var(--ink);
-    border-radius:15px;
-    padding:15px 18px;
-    background:linear-gradient(#48b8ff 0%,#1685f2 55%,#0870d8 56%,#0870d8 100%);
-    color:white;
-    font-size:25px;
-    font-weight:1000;
-    text-shadow:2px 2px 0 #0757a8;
-    box-shadow:0 7px 0 var(--ink),inset 0 3px 0 rgba(255,255,255,.6);
-    transition:transform .1s,filter .1s;
-}
-
-.start-button:hover {filter:brightness(1.1);}
-.start-button:active {
-    transform:translateY(5px);
-    box-shadow:0 2px 0 var(--ink);
-}
-
-.start-tip {
-    margin-top:19px;
-    font-size:13px;
-    font-weight:900;
-    color:#73523b;
-}
-
-/* ===== 게임 화면 ===== */
-#game-screen {padding-top:12px;}
-
-.game-top {
-    width:min(100%,1000px);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:8px;
-    margin-bottom:10px;
-}
-
-.pixel-button {
-    border:3px solid var(--ink);
-    border-radius:10px;
-    background:#fff7c9;
-    padding:9px 13px;
-    font-weight:1000;
-    font-size:13px;
-    color:var(--ink);
-    box-shadow:0 4px 0 var(--ink);
-}
-
-.pixel-button:active {transform:translateY(3px);box-shadow:0 1px 0 var(--ink);}
-
-.mission-chip {
-    border:3px solid var(--ink);
-    border-radius:10px;
-    background:#ffcf54;
-    padding:8px 11px;
-    font-weight:1000;
-    font-size:13px;
-    box-shadow:0 4px 0 var(--ink);
-}
-
-.game-heading {
-    text-align:center;
-    color:#fff;
-    font-size:clamp(24px,4vw,34px);
-    font-weight:1000;
-    -webkit-text-stroke:1px var(--ink);
-    text-shadow:3px 3px 0 var(--ink),5px 5px 0 #2585bd;
-    margin:6px 0 12px;
-}
-
-.instruction {
-    width:min(100%,670px);
-    background:#fff9d9;
-    border:3px solid var(--ink);
-    border-radius:12px;
-    padding:10px 12px;
-    text-align:center;
-    font-size:14px;
-    font-weight:900;
-    line-height:1.6;
-    box-shadow:0 4px 0 var(--ink);
-    margin-bottom:14px;
-}
-
-#stage {
-    width:min(100%,1000px);
-    height:480px;
-    position:relative;
-    overflow:hidden;
-    border:5px solid var(--ink);
-    border-radius:15px;
-    background:#fff0cc;
-    box-shadow:0 7px 0 var(--ink),0 12px 0 rgba(255,255,255,.55);
-    isolation:isolate;
-}
-
-/* 주방의 벽과 바닥 */
-#stage::before {
-    content:"";
-    position:absolute;
-    inset:0 0 29% 0;
-    background:
-      radial-gradient(circle,#fff 0 2px,transparent 3px) 0 0/25px 25px,
-      linear-gradient(#9fe6fa,#d8f7ff);
-    z-index:-2;
-}
-
-#stage::after {
-    content:"";
-    position:absolute;
-    left:0;right:0;bottom:0;
-    height:31%;
-    background:
-      repeating-conic-gradient(#fff3d9 0 25%,#f5d9ad 0 50%) 0 0/46px 46px;
-    border-top:5px solid #b57b4e;
-    z-index:-1;
-}
-
-/* 창문 */
-.window {
-    position:absolute;
-    top:18px;
-    right:24%;
-    width:105px;
-    height:77px;
-    border:6px solid #8e6048;
-    background:linear-gradient(135deg,#7edbfa,#e4fbff);
-    box-shadow:inset 0 0 0 3px #fff;
-    pointer-events:none;
-}
-
-.window::before {
-    content:"";
-    position:absolute;
-    left:50%;top:0;bottom:0;
-    width:5px;background:#8e6048;
-}
-
-.window::after {
-    content:"";
-    position:absolute;
-    top:50%;left:0;right:0;
-    height:5px;background:#8e6048;
-}
-
-/* 싱크대: 왼쪽 */
-#sink {
-    position:absolute;
-    left:16%;
-    top:37%;
-    transform:translate(-50%,-50%);
-    width:clamp(125px,19%,175px);
-    height:130px;
-    border:5px solid #4b5483;
-    border-radius:12px;
-    background:linear-gradient(#d8f7ff 0 25%,#73bce8 26% 100%);
-    box-shadow:0 7px 0 #4b5483,inset 0 4px 0 white;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    z-index:3;
-    color:#253f73;
-    font-weight:1000;
-    transition:filter .1s,transform .1s;
-}
-
-#sink::before {
-    content:"";
-    position:absolute;
-    top:-13px;
-    left:-6px;right:-6px;
-    height:15px;
-    border:4px solid #4b5483;
-    border-radius:7px;
-    background:#9ed8f3;
-}
-
-.sink-icon {font-size:36px;line-height:1.2;}
-.sink-label {
-    margin-top:5px;
-    border:2px solid #4b5483;
-    background:#fff7d1;
-    border-radius:7px;
-    padding:3px 9px;
-    font-size:16px;
-}
-
-#sink.drag-over {
-    filter:brightness(1.13);
-    transform:translate(-50%,-50%) scale(1.05);
-    outline:5px solid #fff;
-}
-
-/* 쓰레기통은 무대 아래에 */
-.stage-bin {
-    position:absolute;
-    bottom:18px;
-    width:25%;
-    max-width:170px;
-    height:100px;
-    border:5px solid var(--ink);
-    border-radius:12px 12px 19px 19px;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    color:white;
-    font-weight:1000;
-    font-size:clamp(13px,2vw,18px);
-    line-height:1.35;
-    text-shadow:2px 2px 0 rgba(73,48,82,.35);
-    box-shadow:0 6px 0 var(--ink),inset 0 4px 0 rgba(255,255,255,.5);
-    z-index:5;
-    transition:transform .12s,filter .12s;
-}
-
-.stage-bin::before {
-    content:"";
-    position:absolute;
-    left:-6px;right:-6px;top:-11px;
-    height:14px;
-    background:inherit;
-    border:4px solid var(--ink);
-    border-radius:8px;
-}
-
-#bin-red {left:2%;}
-#bin-yellow {left:37.5%;}
-#bin-green {right:2%;}
-
-.stage-bin .bin-emoji {font-size:25px;margin-bottom:2px;}
-
-.stage-bin.drag-over {
-    transform:translateY(-7px) scale(1.04);
-    filter:brightness(1.12);
-    outline:4px solid white;
-}
-
-/* 쓰레기 오브젝트 */
-#trash {
-    position:absolute;
-    left:61%;
-    top:37%;
-    width:90px;
-    height:120px;
-    z-index:20;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:grab;
-    touch-action:none;
-    -webkit-user-select:none;
-    user-select:none;
-}
-
-#trash.dragging {
-    cursor:grabbing;
-    filter:drop-shadow(4px 6px 0 rgba(73,48,82,.3));
-    z-index:30;
-}
-
-.trash-svg {
-    width:100%;
-    height:100%;
-    overflow:visible;
-    pointer-events:none;
-}
-
-/* 과자 봉지의 반짝임 */
-#trash.bag-glow {
-    animation:glitter .65s infinite alternate;
-}
-
-@keyframes glitter {
-    from {
-        filter:drop-shadow(0 0 5px #70efff)
-               drop-shadow(0 0 10px #70efff);
-    }
-    to {
-        filter:drop-shadow(0 0 13px #fff)
-               drop-shadow(0 0 20px #50dcff)
-               drop-shadow(0 0 28px #50dcff);
-    }
-}
-
-/* 게임 하단 안내판 */
-.tip-bar {
-    width:min(100%,1000px);
-    margin-top:15px;
-    padding:10px 12px;
-    border:3px solid var(--ink);
-    border-radius:11px;
-    background:#fff8d5;
-    box-shadow:0 4px 0 var(--ink);
-    text-align:center;
-    font-size:13px;
-    font-weight:900;
-    line-height:1.5;
-}
-
-/* 성공/실패 오버레이 */
-#result-overlay {
-    display:none;
-    position:absolute;
-    inset:0;
-    z-index:100;
-    background:rgba(39,54,92,.68);
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    text-align:center;
-}
-
-#result-overlay.show {display:flex;}
-
-.result-card {
-    width:min(85%,420px);
-    padding:28px 16px;
-    background:#fff9dc;
-    border:5px solid var(--ink);
-    border-radius:20px;
-    box-shadow:0 9px 0 var(--ink);
-    animation:pop .25s ease-out;
-}
-
-#result-text {
-    font-size:clamp(48px,10vw,78px);
-    font-weight:1000;
-    -webkit-text-stroke:1px var(--ink);
-    text-shadow:4px 4px 0 rgba(73,48,82,.15);
-    margin-bottom:10px;
-}
-
-#result-sub {
-    font-size:16px;
-    font-weight:1000;
-    line-height:1.7;
-}
-
-@keyframes pop {
-    from {transform:scale(.65) rotate(-5deg);opacity:0;}
-    to {transform:scale(1) rotate(0);opacity:1;}
-}
-
-@media(max-width:540px) {
-    #game,.screen {min-height:760px;}
-    .screen {padding:14px 9px;}
-    #stage {height:455px;}
-    #sink {
-        left:20%;
-        top:36%;
-        width:120px;
-        height:110px;
-    }
-    #trash {width:75px;height:105px;}
-    .stage-bin {
-        width:31%;
-        height:91px;
-        bottom:15px;
-    }
-    #bin-red {left:1%;}
-    #bin-yellow {left:34.5%;}
-    #bin-green {right:1%;}
-    .window {width:65px;height:58px;right:21%;}
-    .instruction {font-size:13px;}
-    .mission-chip,.pixel-button {font-size:11px;padding:8px;}
-    .start-card {padding:17px 8px;}
-}
+*{box-sizing:border-box}
+:root{--pink:#ff79b9;--hot:#f34d9c;--ink:#54295f;--cream:#fff8f3;--blue:#66c9ff;--yellow:#ffdb58}
+body{margin:0;font-family:"Trebuchet MS","Malgun Gothic",sans-serif;background:#ffd7eb;color:var(--ink);user-select:none}
+button{font:inherit;cursor:pointer}
+.game-wrap{max-width:1180px;margin:0 auto;padding:14px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.logo{font-size:clamp(25px,4vw,44px);font-weight:1000;letter-spacing:-1.5px;color:#ff3d9b;text-shadow:2px 3px 0 white,4px 5px 0 #a7358a,-1px -1px 0 white}
+.logo span{display:inline-block;background:#fff;border:3px solid #ef5eae;border-radius:22px;padding:7px 15px;box-shadow:0 5px 0 #c94891;transform:rotate(-1deg)}
+.mission{background:linear-gradient(#fff5a9,#ffce48);border:3px solid #a45b31;border-radius:20px;padding:10px 17px;font-weight:1000;font-size:clamp(14px,2vw,21px);box-shadow:0 4px 0 #b86d3b}
+.instructions{display:flex;align-items:center;gap:12px;background:#fff;border:3px solid #f17eb7;border-radius:22px;padding:10px 16px;margin-bottom:12px;box-shadow:0 5px 0 #d8589d}
+.mascot{font-size:clamp(38px,6vw,64px);filter:drop-shadow(2px 3px 0 #ffd0e9)}
+.instructions p{margin:0;font-size:clamp(14px,2vw,19px);font-weight:900;line-height:1.45}
+.panel{position:relative;border:5px solid #f17eb7;border-radius:28px;background:#fff9f5;padding:10px;box-shadow:0 8px 0 #c94891, inset 0 0 0 3px white;overflow:hidden}
+.stage{height:600px;min-height:500px;position:relative;overflow:hidden;border:4px solid #e85fa9;border-radius:20px;background:linear-gradient(to bottom,#8de0ff 0%,#c8f3ff 27%,#ffb8d8 27%,#ffc9df 62%,#ffe6c5 62%,#ffdda8 100%);isolation:isolate}
+.skyline{position:absolute;left:0;right:0;top:18%;height:17%;opacity:.55;background:linear-gradient(90deg,transparent 0 4%,#8cc8f4 4% 8%,transparent 8% 12%,#8cc8f4 12% 18%,transparent 18% 22%,#8cc8f4 22% 27%,transparent 27% 32%,#8cc8f4 32% 38%,transparent 38% 43%,#8cc8f4 43% 50%,transparent 50% 55%,#8cc8f4 55% 62%,transparent 62% 67%,#8cc8f4 67% 74%,transparent 74% 79%,#8cc8f4 79% 85%,transparent 85% 90%,#8cc8f4 90% 95%,transparent 95%)}
+.window{position:absolute;top:4%;left:27%;width:43%;height:30%;background:linear-gradient(#7bd5ff,#d5f7ff);border:8px solid #fff4fa;border-radius:8px;box-shadow:0 0 0 4px #f47bb6;z-index:1}
+.window:before,.window:after{content:"";position:absolute;background:#fff7fc;box-shadow:0 0 0 2px #f47bb6}
+.window:before{width:7px;top:0;bottom:0;left:50%}.window:after{height:7px;left:0;right:0;top:53%}
+.cloud{position:absolute;font-size:42px;opacity:.9}
+.c1{top:3%;left:32%}.c2{top:8%;right:30%}
+.curtain{position:absolute;top:3%;height:32%;width:7%;z-index:2;background:repeating-linear-gradient(90deg,#ff86bd 0 10px,#ffd4e8 10px 20px);border:3px solid white;border-radius:0 0 18px 18px;box-shadow:0 3px 0 #dc579b}
+.curtain.left{left:25%}.curtain.right{left:65%}
+.walltiles{position:absolute;top:34%;left:0;right:0;height:27%;background-color:#ffb9d9;background-image:linear-gradient(#ff8ec2 2px,transparent 2px),linear-gradient(90deg,#ff8ec2 2px,transparent 2px);background-size:70px 45px;z-index:-0}
+.floor{position:absolute;left:0;right:0;bottom:0;height:39%;background-color:#ffe5c6;background-image:linear-gradient(90deg,transparent 49%,#f6b6b7 50%,transparent 51%),linear-gradient(#f7b6b6 2px,transparent 2px);background-size:120px 58px;border-top:10px solid #ffbf80}
+.counter{position:absolute;left:0;right:0;top:58%;height:13%;background:linear-gradient(#ffdfa9,#ffbf79);border-top:7px solid #fff2d7;border-bottom:7px solid #ed9b67;z-index:1}
+.sink{position:absolute;left:3%;top:38%;width:23%;height:25%;z-index:3;cursor:pointer;filter:drop-shadow(0 5px 0 #4383c5)}
+.sink-top{position:absolute;inset:0;background:linear-gradient(#c8f1ff,#69bfff);border:5px solid #367ac5;border-radius:10px;box-shadow:inset 0 0 0 4px #fff}
+.basin{position:absolute;left:13%;right:13%;top:14%;height:38%;background:linear-gradient(#498de0,#9fe4ff);border:5px solid #3475bf;border-radius:8px 8px 24px 24px}
+.tap{position:absolute;left:45%;top:-18%;width:18%;height:28%;border:7px solid #3979c1;border-bottom:0;border-radius:18px 18px 0 0}
+.tap:after{content:"";position:absolute;width:30px;height:10px;right:-25px;top:0;background:#5cb9ff;border:4px solid #3979c1;border-radius:8px}
+.sink-label{position:absolute;left:14%;bottom:-18%;background:#4e9bff;color:white;border:4px solid #2455b6;border-radius:20px;padding:5px 17px;font-size:clamp(14px,2vw,22px);font-weight:1000;text-shadow:1px 2px #2455b6;white-space:nowrap}
+.plant{position:absolute;right:6%;top:30%;font-size:clamp(30px,4vw,55px);z-index:2}
+.fridge{position:absolute;right:4%;top:32%;height:30%;width:13%;border:5px solid #ed72b2;border-radius:14px;background:linear-gradient(90deg,#ffadd5,#ffd9eb);z-index:2;box-shadow:inset 5px 0 white}
+.fridge:before{content:"";position:absolute;top:48%;left:0;right:0;border-top:4px solid #ed72b2}
+.fridge:after{content:"";position:absolute;top:18%;right:10%;height:22%;border-right:4px solid #d95a9b}
+.heart{position:absolute;color:#ff4f9c;font-size:35px;text-shadow:2px 2px white;z-index:4}
+.h1{left:28%;top:39%}.h2{right:20%;top:37%}
+.bin-row{position:absolute;left:7%;right:7%;bottom:4%;height:30%;display:flex;align-items:flex-end;justify-content:space-around;gap:3%;z-index:4}
+.bin{position:relative;width:25%;height:88%;border:5px solid #4f234a;border-radius:18px 18px 28px 28px;box-shadow:0 7px 0 #8b4b71,inset 0 0 0 4px rgba(255,255,255,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:clamp(16px,2.5vw,27px);font-weight:1000;text-shadow:2px 2px #7e305f;transition:transform .15s,filter .15s}
+.bin:before{content:"";position:absolute;top:-10%;left:-5%;width:110%;height:18%;border:5px solid #4f234a;border-radius:14px;background:inherit;filter:brightness(1.08)}
+.bin .bin-icon{font-size:clamp(30px,5vw,55px);line-height:1.1;filter:drop-shadow(2px 2px 0 rgba(0,0,0,.12))}
+.bin.vinyl{background:linear-gradient(90deg,#ff3d66,#ff6b8a)}.bin.plastic{background:linear-gradient(90deg,#ffc32e,#ffe15b);color:#fff;text-shadow:2px 2px #b77800}.bin.can{background:linear-gradient(90deg,#20c77b,#49e6a0)}
+.bin.hover{transform:translateY(-10px) scale(1.04);filter:brightness(1.15)}
+.trash{position:absolute;left:48%;top:42%;width:92px;height:120px;z-index:10;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;filter:drop-shadow(0 7px 4px #ad4c8a88);transform:rotate(-5deg)}
+.trash:active{cursor:grabbing}
+.trash svg{width:100%;height:100%;overflow:visible}
+.trash.dragging{z-index:20;filter:drop-shadow(0 10px 5px #aa4a8a99) brightness(1.04);transform:rotate(3deg) scale(1.06)}
+.tipbar{display:flex;align-items:center;gap:12px;background:#fff;border:4px solid #f17eb7;border-radius:20px;padding:12px 16px;margin-top:12px;font-size:clamp(13px,1.8vw,19px);font-weight:900}
+.tip-pill{background:#ff55a8;color:white;border:3px solid #a52e77;border-radius:18px;padding:4px 14px;box-shadow:0 3px 0 #b13c7f}
+.overlay{position:absolute;inset:0;background:#ffeff8eF;z-index:30;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.start-card{background:linear-gradient(#fff,#fff1f8);border:5px solid #f46caf;border-radius:30px;padding:25px;max-width:550px;width:90%;box-shadow:0 9px 0 #c94891}
+.start-card h1{font-size:clamp(28px,5vw,52px);color:#ff3d9b;text-shadow:2px 3px white,4px 5px #b84b8b;margin:0 0 10px}
+.start-card p{font-weight:900;font-size:clamp(15px,2vw,20px);line-height:1.6}
+.preview{font-size:clamp(42px,7vw,68px);margin:8px 0 16px}
+.big-button{border:4px solid #2455b6;border-radius:25px;background:linear-gradient(#7de0ff,#3c8bff);color:white;font-weight:1000;font-size:clamp(21px,3vw,30px);padding:12px 28px;text-shadow:2px 3px #2455b6;box-shadow:0 7px 0 #2449a3}
+.big-button:active{transform:translateY(4px);box-shadow:0 3px 0 #2449a3}
+.result{font-size:clamp(25px,4vw,42px);font-weight:1000;color:#ff3999;text-shadow:2px 2px white}
+.small{font-size:13px;color:#7f4b77}
+@media(max-width:650px){.game-wrap{padding:6px}.panel{padding:5px;border-width:3px}.stage{height:560px}.window{left:30%;width:42%}.sink{width:26%;height:22%;top:40%}.bin-row{left:2%;right:2%;gap:2%;height:25%}.bin{width:31%;font-size:14px;border-width:3px}.bin .bin-icon{font-size:32px}.trash{width:68px;height:95px;left:48%;top:44%}.sink-label{left:0;bottom:-23%;padding:4px 9px}.instructions{padding:8px}.fridge{width:15%;right:2%}.curtain.left{left:26%}.curtain.right{left:67%}}
 </style>
 </head>
-
 <body>
-<div id="game">
-
-    <!-- 시작 화면 -->
-    <section id="start-screen" class="screen active">
-        <div class="start-mascot">🌎</div>
-
-        <h1 class="logo">
-            <span class="rainbow">알록달록!</span><br>
-            쓰레기 구조대
-        </h1>
-
-        <div class="tagline">
-            오늘의 미션! 쓰레기를 구해 주세요!
-        </div>
-
+<div class="game-wrap">
+  <div class="topbar">
+    <div class="logo"><span>♻ 알록달록 쓰레기 분류 게임!</span></div>
+    <div class="mission">⭐ 미션: 쓰레기를 깨끗하게 분리배출</div>
+  </div>
+  <div class="instructions"><div class="mascot">🐰</div><p>쓰레기를 잡고 드래그해서 <b>싱크대에 먼저 놓은 후</b>, 알맞은 쓰레기통에 쏙 넣어 주세요! 💗</p></div>
+  <div class="panel">
+    <div class="stage" id="stage">
+      <div class="skyline"></div><div class="window"></div><div class="cloud c1">☁️</div><div class="cloud c2">☁️</div>
+      <div class="curtain left"></div><div class="curtain right"></div><div class="walltiles"></div><div class="floor"></div>
+      <div class="counter"></div>
+      <div class="plant">🪴</div><div class="fridge"></div><div class="heart h1">♥</div><div class="heart h2">♥</div>
+      <div class="sink" id="sink" data-zone="sink"><div class="sink-top"></div><div class="basin"></div><div class="tap"></div><div class="sink-label">싱크대 🫧</div></div>
+      <div class="bin-row">
+        <div class="bin vinyl" data-zone="vinyl"><div class="bin-icon">🛍️</div><div>비닐</div></div>
+        <div class="bin plastic" data-zone="plastic"><div class="bin-icon">🧴</div><div>플라스틱</div></div>
+        <div class="bin can" data-zone="can"><div class="bin-icon">🥫</div><div>캔·고철</div></div>
+      </div>
+      <div class="trash" id="trash" aria-label="드래그할 쓰레기"></div>
+      <div class="overlay" id="overlay">
         <div class="start-card">
-            <p class="start-description">
-                쓰레기를 깨끗하게 정리하고<br>
-                알맞은 쓰레기통에 쏙 넣어 보세요!
-            </p>
-
-            <div class="intro-bins">
-                <div class="bin red">
-                    <div class="bin-emoji">🗑️</div>
-                    비닐
-                </div>
-                <div class="bin yellow">
-                    <div class="bin-emoji">🗑️</div>
-                    플라스틱
-                </div>
-                <div class="bin green">
-                    <div class="bin-emoji">🗑️</div>
-                    캔, 고철
-                </div>
-            </div>
-
-            <button id="start-button" class="start-button">
-                ▶ 시작하기!
-            </button>
-
-            <p class="start-tip">
-                💡 싱크대에 먼저 놓고, 알맞은 통으로 옮기기!
-            </p>
+          <h1>알록달록!<br>쓰레기 구조대</h1>
+          <p>지구를 깨끗하게 만드는 작은 영웅이 되어 봐요!<br>먼저 싱크대에서 쓰레기를 정리하고<br>알맞은 통에 분류하면 성공이에요.</p>
+          <div class="preview">🧃　🥫　🛍️</div>
+          <button class="big-button" id="startBtn">시작하기 ▶</button>
+          <p class="small">추억의 플래시 미니게임 감성 · 마우스로 드래그!</p>
         </div>
-    </section>
-
-    <!-- 게임 화면 -->
-    <section id="game-screen" class="screen">
-        <div class="game-top">
-            <button id="home-button" class="pixel-button">
-                🏠 처음으로
-            </button>
-            <span class="mission-chip">⭐ 미션 1 / 1</span>
-        </div>
-
-        <h2 class="game-heading">어디에 버릴까요?</h2>
-
-        <div id="instruction" class="instruction">
-            🧽 쓰레기를 잡고 싱크대에 먼저 놓아 주세요!
-        </div>
-
-        <div id="stage">
-            <div class="window"></div>
-
-            <!-- 싱크대 -->
-            <div id="sink" data-zone="sink">
-                <div class="sink-icon">🚰</div>
-                <div class="sink-label">싱크대</div>
-            </div>
-
-            <!-- 분리배출 통 -->
-            <div id="bin-red" class="stage-bin red" data-zone="red">
-                <div class="bin-emoji">🗑️</div>
-                비닐
-            </div>
-
-            <div id="bin-yellow" class="stage-bin yellow" data-zone="yellow">
-                <div class="bin-emoji">🗑️</div>
-                플라스틱
-            </div>
-
-            <div id="bin-green" class="stage-bin green" data-zone="green">
-                <div class="bin-emoji">🗑️</div>
-                캔, 고철
-            </div>
-
-            <!-- 랜덤 쓰레기가 나타나는 곳 -->
-            <div id="trash"></div>
-        </div>
-
-        <div class="tip-bar">
-            💡 TIP : 먼저 싱크대에서 정리한 뒤 알맞은 쓰레기통으로 옮겨 주세요!
-        </div>
-    </section>
-
-    <!-- 결과 팝업 -->
-    <div id="result-overlay">
-        <div class="result-card">
-            <div id="result-text">성공! 🎉</div>
-            <div id="result-sub">지구가 기뻐하고 있어요!</div>
-        </div>
+      </div>
     </div>
+    <div class="tipbar"><span style="font-size:28px">💡</span><span class="tip-pill">TIP</span><span id="tip">쓰레기를 싱크대에 먼저 놓은 다음, 알맞은 쓰레기통으로 옮겨 주세요!</span><span style="margin-left:auto">💕</span></div>
+  </div>
 </div>
-
 <script>
-// ==========================================
-// 3. 쓰레기 그림: SVG로 직접 그려요.
-// ==========================================
-
-const pictures = {
-    juice: `
-    <svg class="trash-svg" viewBox="0 0 100 125">
-      <rect x="39" y="5" width="22" height="13" rx="3" fill="#579447"/>
-      <path d="M38 17 L62 17 L62 30 Q70 37 72 47 L75 104 Q75 115 64 116 L36 116 Q25 115 25 104 L28 47 Q30 37 38 30 Z"
-        fill="#ffad42" stroke="#8e4c2c" stroke-width="3"/>
-      <path d="M34 45 Q32 58 33 73" fill="none" stroke="#ffe6ac" stroke-width="5" stroke-linecap="round"/>
-      <rect x="28" y="60" width="44" height="30" rx="5" fill="#fff2c9" stroke="#8e4c2c" stroke-width="2"/>
-      <circle cx="50" cy="75" r="10" fill="#ff9c25"/>
-      <path d="M50 65 L50 85 M40 75 L60 75 M43 68 L57 82 M57 68 L43 82"
-        stroke="#ffe5a3" stroke-width="1.5"/>
-      <text x="50" y="99" text-anchor="middle" font-size="7" fill="#a95d20" font-weight="bold">ORANGE</text>
-    </svg>`,
-
-    emptyBottle: `
-    <svg class="trash-svg" viewBox="0 0 100 125">
-      <rect x="40" y="5" width="20" height="12" rx="3" fill="#78b875" stroke="#493052" stroke-width="2"/>
-      <path d="M39 17 L61 17 L61 30 Q69 38 71 47 L74 103 Q75 115 64 116 L36 116 Q25 115 26 103 L29 47 Q31 38 39 30 Z"
-        fill="#d8f2ed" fill-opacity=".85" stroke="#493052" stroke-width="3"/>
-      <path d="M35 43 Q32 62 35 95" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-      <path d="M33 35 L67 35 M31 43 L69 43" stroke="#a5d7cc" stroke-width="2"/>
-      <path d="M36 103 L64 103" stroke="#a5d7cc" stroke-width="2"/>
-    </svg>`,
-
-    cola: `
-    <svg class="trash-svg" viewBox="0 0 100 125">
-      <path d="M25 18 Q23 22 24 28 L28 105 Q29 113 37 115 L63 115 Q71 113 72 105 L76 28 Q77 22 75 18 Z"
-        fill="#d72e39" stroke="#493052" stroke-width="3"/>
-      <ellipse cx="50" cy="19" rx="24" ry="6" fill="#eee" stroke="#493052" stroke-width="2"/>
-      <ellipse cx="50" cy="19" rx="11" ry="3" fill="#a4a4a4"/>
-      <path d="M30 34 Q35 44 34 60" fill="none" stroke="#f98c91" stroke-width="4" stroke-linecap="round"/>
-      <text x="50" y="73" text-anchor="middle" font-size="15" font-weight="900" fill="white">COLA</text>
-      <path d="M29 104 Q50 110 71 104" stroke="#f7a0a4" stroke-width="2" fill="none"/>
-    </svg>`,
-
-    plainCan: `
-    <svg class="trash-svg" viewBox="0 0 100 125">
-      <defs>
-        <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stop-color="#9babb2"/>
-          <stop offset=".35" stop-color="#f5f8f8"/>
-          <stop offset=".7" stop-color="#c6d0d4"/>
-          <stop offset="1" stop-color="#899da4"/>
-        </linearGradient>
-      </defs>
-      <path d="M27 18 Q25 23 26 29 L29 104 Q30 113 38 115 L62 115 Q70 113 71 104 L74 29 Q75 23 73 18 Z"
-        fill="url(#metal)" stroke="#493052" stroke-width="3"/>
-      <ellipse cx="50" cy="19" rx="23" ry="7" fill="#e8eded" stroke="#493052" stroke-width="2"/>
-      <ellipse cx="50" cy="19" rx="10" ry="3" fill="#9eacb0"/>
-      <path d="M32 33 L35 98" stroke="#fff" stroke-width="4"/>
-      <path d="M30 105 Q50 111 70 105" stroke="#87989d" stroke-width="2" fill="none"/>
-    </svg>`,
-
-    bag: `
-    <svg class="trash-svg" viewBox="0 0 100 125">
-      <path d="M20 20 L80 20 L85 31 L81 101 L73 110 L27 110 L19 101 L15 31 Z"
-        fill="#f4bd52" stroke="#493052" stroke-width="3"/>
-      <path d="M20 20 L80 20 L76 29 L24 29 Z" fill="#ffe5a0"/>
-      <path d="M19 100 L81 100 L73 110 L27 110 Z" fill="#e6a73d"/>
-      <rect x="23" y="41" width="54" height="43" rx="8" fill="#fff4d5" stroke="#493052" stroke-width="2"/>
-      <circle cx="50" cy="61" r="13" fill="#ee7c45"/>
-      <circle cx="45" cy="57" r="2" fill="#fff1c4"/>
-      <circle cx="55" cy="57" r="2" fill="#fff1c4"/>
-      <path d="M45 66 Q50 71 55 66" stroke="#fff1c4" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <text x="50" y="95" text-anchor="middle" font-size="8" font-weight="900" fill="#996124">SNACK</text>
-    </svg>`
-};
-
-// ==========================================
-// 4. 게임 상태
-// ==========================================
-
-const startScreen = document.getElementById("start-screen");
-const gameScreen = document.getElementById("game-screen");
-const startButton = document.getElementById("start-button");
-const homeButton = document.getElementById("home-button");
-const stage = document.getElementById("stage");
-const trash = document.getElementById("trash");
-const instruction = document.getElementById("instruction");
-const overlay = document.getElementById("result-overlay");
-const resultText = document.getElementById("result-text");
-const resultSub = document.getElementById("result-sub");
-
-let currentTrash = null;
-let cleaned = false;
-let gameOver = false;
-let dragging = false;
-let offsetX = 0;
-let offsetY = 0;
-let resultTimer = null;
-
-// 정답 쓰레기통
-const trashTypes = [
-    {id:"juice", answer:"yellow"},
-    {id:"cola", answer:"green"},
-    {id:"bag", answer:"red"}
+const stage=document.getElementById('stage'), trash=document.getElementById('trash'), overlay=document.getElementById('overlay');
+const tip=document.getElementById('tip'), startBtn=document.getElementById('startBtn');
+let item=null, cleaned=false, dragging=false, offsetX=0, offsetY=0, timer=null, startPosition={x:0,y:0};
+const items=[
+ {kind:'juice',answer:'plastic',raw:'🧃',clean:'🧴',tip:'음료를 다 마셨다면 내용물을 비우고 싱크대에서 정리해요!',rawSvg:`<svg viewBox="0 0 100 130"><defs><linearGradient id="juiceG" x1="0" x2="1"><stop stop-color="#ffed72"/><stop offset=".5" stop-color="#ffb51f"/><stop offset="1" stop-color="#ff7c16"/></linearGradient></defs><path d="M30 13 L70 13 L76 35 L82 111 Q50 126 18 111 L24 35Z" fill="url(#juiceG)" stroke="#a84b26" stroke-width="5"/><path d="M35 10 L65 10 L65 21 L35 21Z" fill="#f4fbff" stroke="#a84b26" stroke-width="4"/><path d="M30 48 Q50 36 70 48" fill="none" stroke="#fff5bd" stroke-width="5"/><circle cx="50" cy="75" r="15" fill="#fff3a0" stroke="#f28a21" stroke-width="3"/><path d="M50 61 L50 89 M36 75 L64 75" stroke="#f28a21" stroke-width="3"/></svg>`,cleanSvg:`<svg viewBox="0 0 100 130"><defs><linearGradient id="bottleG" x1="0" x2="1"><stop stop-color="#c5f5ff" stop-opacity=".8"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#69caff" stop-opacity=".8"/></linearGradient></defs><path d="M40 10 L60 10 L60 27 L69 39 L77 112 Q50 125 23 112 L31 39 L40 27Z" fill="url(#bottleG)" stroke="#287bb7" stroke-width="4"/><path d="M39 8 L61 8 L61 17 L39 17Z" fill="#ffdb56" stroke="#287bb7" stroke-width="3"/><path d="M33 52 Q50 60 67 52" fill="none" stroke="#fff" stroke-width="5"/><path d="M38 80 L61 80" stroke="#fff" stroke-width="4"/></svg>`},
+ {kind:'cola',answer:'can',raw:'🥫',clean:'🥫',tip:'캔은 내용물을 비우고 헹군 뒤 캔·고철 통으로!',rawSvg:`<svg viewBox="0 0 100 130"><defs><linearGradient id="canG" x1="0" x2="1"><stop stop-color="#bd123c"/><stop offset=".5" stop-color="#ff385c"/><stop offset="1" stop-color="#bd123c"/></linearGradient></defs><rect x="19" y="16" width="62" height="100" rx="10" fill="url(#canG)" stroke="#76264e" stroke-width="5"/><ellipse cx="50" cy="18" rx="31" ry="8" fill="#d9e6ef" stroke="#76264e" stroke-width="4"/><ellipse cx="50" cy="18" rx="17" ry="4" fill="#f8fbff"/><path d="M29 62 Q50 78 71 62" fill="none" stroke="#fff" stroke-width="7"/><path d="M29 91 Q50 103 71 91" fill="none" stroke="#ff9bad" stroke-width="4"/></svg>`,cleanSvg:`<svg viewBox="0 0 100 130"><rect x="19" y="16" width="62" height="100" rx="10" fill="#d4e5ef" stroke="#687d9b" stroke-width="5"/><ellipse cx="50" cy="18" rx="31" ry="8" fill="#f6fbff" stroke="#687d9b" stroke-width="4"/><ellipse cx="50" cy="18" rx="17" ry="4" fill="#94a8bb"/><path d="M28 62 Q50 77 72 62" fill="none" stroke="#fff" stroke-width="7"/><path d="M30 90 L70 90" stroke="#9cb0c1" stroke-width="4"/></svg>`},
+ {kind:'bag',answer:'vinyl',raw:'🛍️',clean:'🛍️',tip:'과자 봉지는 바스락거리는 비닐 포장! 비닐 통에 넣어요!',rawSvg:`<svg viewBox="0 0 110 130"><defs><linearGradient id="bagG" x1="0" x2="1"><stop stop-color="#ffb500"/><stop offset=".25" stop-color="#fff24d"/><stop offset=".55" stop-color="#ffcf00"/><stop offset=".8" stop-color="#fff36c"/><stop offset="1" stop-color="#ff9e00"/></linearGradient><linearGradient id="shine" x1="0" x2="1"><stop stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="M18 20 L92 20 L99 112 L85 122 L25 119 L11 111Z" fill="url(#bagG)" stroke="#a84b22" stroke-width="5" stroke-linejoin="round"/><path d="M17 20 L93 20 L89 31 L20 31Z" fill="#ff6a23" stroke="#a84b22" stroke-width="3"/><path d="M27 35 L40 112 L30 112Z" fill="url(#shine)"/><path d="M25 44 L84 44" stroke="#ff7e19" stroke-width="4"/><path d="M25 51 L84 51" stroke="#fff7a2" stroke-width="3"/><rect x="26" y="58" width="58" height="40" rx="7" fill="#ff4a26" stroke="#fff3a2" stroke-width="3"/><text x="55" y="75" font-size="13" text-anchor="middle" fill="white" font-weight="bold">바삭!</text><path d="M30 88 Q55 75 79 88" fill="none" stroke="#ffdf60" stroke-width="4"/><path d="M14 110 L28 116 M82 117 L98 110" stroke="#fff" stroke-width="3" opacity=".9"/></svg>`,cleanSvg:`<svg viewBox="0 0 110 130"><defs><linearGradient id="bagClean" x1="0" x2="1"><stop stop-color="#fff7b3"/><stop offset=".4" stop-color="#ffe94c"/><stop offset=".7" stop-color="#fff8a8"/><stop offset="1" stop-color="#ffd13a"/></linearGradient></defs><path d="M18 20 L92 20 L99 112 L85 122 L25 119 L11 111Z" fill="url(#bagClean)" stroke="#a84b22" stroke-width="5" stroke-linejoin="round"/><path d="M17 20 L93 20 L89 31 L20 31Z" fill="#ffad2c" stroke="#a84b22" stroke-width="3"/><path d="M27 35 L40 112 L30 112Z" fill="#fff" opacity=".65"/><path d="M25 44 L84 44 M25 51 L84 51" stroke="#fff" stroke-width="3"/><path d="M26 58 L84 58 L81 98 L29 98Z" fill="#ff6c2b" stroke="#fff0a4" stroke-width="3"/><path d="M30 88 Q55 75 79 88" fill="none" stroke="#ffdf60" stroke-width="4"/></svg>`}
 ];
-
-// ==========================================
-// 5. 화면 전환
-// ==========================================
-
-function showStartScreen() {
-    clearTimeout(resultTimer);
-    overlay.classList.remove("show");
-    gameScreen.classList.remove("active");
-    startScreen.classList.add("active");
-    gameOver = false;
-    dragging = false;
-}
-
-function startGame() {
-    clearTimeout(resultTimer);
-    overlay.classList.remove("show");
-
-    startScreen.classList.remove("active");
-    gameScreen.classList.add("active");
-
-    // 세 종류 중 하나를 무작위로 골라요.
-    currentTrash = trashTypes[
-        Math.floor(Math.random() * trashTypes.length)
-    ];
-
-    cleaned = false;
-    gameOver = false;
-    dragging = false;
-
-    trash.innerHTML = pictures[currentTrash.id];
-    trash.classList.remove("bag-glow","dragging");
-    trash.style.display = "flex";
-    trash.style.visibility = "visible";
-    trash.style.left = "61%";
-    trash.style.top = "37%";
-    trash.style.transform = "translate(-50%,-50%)";
-
-    instruction.innerHTML =
-        "🧽 쓰레기를 잡고 <b>왼쪽 싱크대</b>에 먼저 놓아 주세요!";
-}
-
-// ==========================================
-// 6. 결과 표시
-// ==========================================
-
-function finishGame(success) {
-    if (gameOver) return;
-
-    gameOver = true;
-    dragging = false;
-
-    resultText.textContent = success ? "성공! 🎉" : "실패! 😭";
-    resultText.style.color = success ? "#27ad72" : "#ef5267";
-    resultSub.textContent = success
-        ? "지구가 기뻐하고 있어요!"
-        : "다시 도전해 봐요!";
-
-    overlay.classList.add("show");
-
-    // 결과를 3초 동안 보여준 뒤 첫 화면으로 돌아가요.
-    resultTimer = setTimeout(showStartScreen, 3000);
-}
-
-// ==========================================
-// 7. 드롭 위치 확인
-//    쓰레기를 잠시 숨겨서 아래쪽 대상을 찾아요.
-// ==========================================
-
-function getDropZone(clientX, clientY) {
-    const oldVisibility = trash.style.visibility;
-    trash.style.visibility = "hidden";
-
-    const element = document.elementFromPoint(clientX, clientY);
-
-    trash.style.visibility = oldVisibility;
-
-    if (!element) return null;
-
-    const zone = element.closest("[data-zone]");
-
-    if (!zone || !stage.contains(zone)) return null;
-
-    return zone.dataset.zone;
-}
-
-// ==========================================
-// 8. 싱크대와 쓰레기통 처리
-// ==========================================
-
-function handleDrop(zone) {
-    if (gameOver || !currentTrash || !zone) return;
-
-    // 첫 번째 단계: 싱크대를 먼저 거쳐야 해요.
-    if (!cleaned) {
-        if (zone === "sink") {
-            cleaned = true;
-
-            if (currentTrash.id === "juice") {
-                trash.innerHTML = pictures.emptyBottle;
-                instruction.innerHTML =
-                    "✨ 주스를 비웠어요! 빈 페트병을 <b>노란색 플라스틱 통</b>에 넣어요!";
-            } else if (currentTrash.id === "cola") {
-                trash.innerHTML = pictures.plainCan;
-                instruction.innerHTML =
-                    "✨ 캔을 정리했어요! 일반 캔을 <b>초록색 캔·고철 통</b>에 넣어요!";
-            } else {
-                trash.classList.add("bag-glow");
-                instruction.innerHTML =
-                    "✨ 반짝반짝! 과자 봉지를 <b>빨간색 비닐 통</b>에 넣어요!";
-            }
-
-            // 정리한 쓰레기를 다시 잡기 편한 위치에 놓아요.
-            trash.style.left = "54%";
-            trash.style.top = "37%";
-            trash.style.transform = "translate(-50%,-50%)";
-        } else {
-            // 싱크대를 거치지 않고 통에 넣으면 실패예요.
-            finishGame(false);
-        }
-
-        return;
-    }
-
-    // 두 번째 단계: 정답 통인지 확인해요.
-    if (zone === "red" || zone === "yellow" || zone === "green") {
-        finishGame(zone === currentTrash.answer);
-    } else if (zone === "sink") {
-        // 싱크대에 다시 놓으면 처리된 상태를 유지해요.
-        trash.style.left = "54%";
-        trash.style.top = "37%";
-        trash.style.transform = "translate(-50%,-50%)";
-    }
-}
-
-// ==========================================
-// 9. 마우스와 터치 드래그
-// ==========================================
-
-trash.addEventListener("pointerdown", function(event) {
-    if (gameOver || !currentTrash) return;
-
-    event.preventDefault();
-
-    dragging = true;
-    trash.classList.add("dragging");
-
-    const rect = trash.getBoundingClientRect();
-    offsetX = event.clientX - rect.left;
-    offsetY = event.clientY - rect.top;
-
-    // 손가락이나 마우스가 쓰레기 밖으로 나가도 계속 추적해요.
-    try {
-        trash.setPointerCapture(event.pointerId);
-    } catch (error) {
-        // 포인터 캡처를 사용할 수 없는 환경도 처리해요.
-    }
+function setTrashSvg(){trash.innerHTML=cleaned?item.cleanSvg:item.rawSvg;}
+function placeTrash(x,y){const maxX=stage.clientWidth-trash.offsetWidth-8,maxY=stage.clientHeight-trash.offsetHeight-8;trash.style.left=Math.max(8,Math.min(x,maxX))+'px';trash.style.top=Math.max(8,Math.min(y,maxY))+'px';}
+function randomItem(){item=items[Math.floor(Math.random()*items.length)];cleaned=false;setTrashSvg();placeTrash(stage.clientWidth*.47,stage.clientHeight*.43);trash.style.display='flex';tip.textContent='쓰레기를 싱크대에 먼저 놓은 다음, 알맞은 쓰레기통으로 옮겨 주세요!';}
+function startGame(){if(timer)clearTimeout(timer);overlay.style.display='none';randomItem();}
+function showStart(){if(timer)clearTimeout(timer);overlay.style.display='flex';overlay.innerHTML=`<div class="start-card"><h1>알록달록!<br>쓰레기 구조대</h1><p>지구를 깨끗하게 만드는 작은 영웅이 되어 봐요!<br>먼저 싱크대에서 쓰레기를 정리하고<br>알맞은 통에 분류하면 성공이에요.</p><div class="preview">🧃　🥫　🛍️</div><button class="big-button" id="startBtn">다시 시작하기 ▶</button><p class="small">추억의 플래시 미니게임 감성 · 마우스로 드래그!</p></div>`;document.getElementById('startBtn').addEventListener('click',startGame);}
+function finish(ok){if(timer)clearTimeout(timer);overlay.style.display='flex';overlay.innerHTML=`<div class="start-card"><div class="preview">${ok?'🎉🌟🐰🌟🎉':'😵‍💫💦'}</div><div class="result">${ok?'미션 성공! 참 잘했어요!':'앗! 다시 도전해 봐요!'}</div><p>${ok?'쓰레기를 깨끗하게 분류했어요. 지구가 반짝반짝해졌어요!':'먼저 싱크대에 놓고, 알맞은 쓰레기통으로 옮겨 보세요!'}</p><p class="small">3초 후 처음 화면으로 돌아갑니다.</p></div>`;timer=setTimeout(showStart,3000);}
+function zoneAt(clientX,clientY){trash.style.visibility='hidden';const el=document.elementFromPoint(clientX,clientY);trash.style.visibility='visible';return el?el.closest('[data-zone]'):null;}
+trash.addEventListener('pointerdown',e=>{if(overlay.style.display!=='none')return;dragging=true;trash.classList.add('dragging');const tr=trash.getBoundingClientRect();offsetX=e.clientX-tr.left;offsetY=e.clientY-tr.top;const sr=stage.getBoundingClientRect();startPosition={x:tr.left-sr.left,y:tr.top-sr.top};trash.setPointerCapture(e.pointerId);e.preventDefault();});
+trash.addEventListener('pointermove',e=>{if(!dragging)return;const sr=stage.getBoundingClientRect();placeTrash(e.clientX-sr.left-offsetX,e.clientY-sr.top-offsetY);});
+trash.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;trash.classList.remove('dragging');const zone=zoneAt(e.clientX,e.clientY);document.querySelectorAll('.bin').forEach(b=>b.classList.remove('hover'));if(!zone){return;}const z=zone.dataset.zone;
+ if(!cleaned){if(z==='sink'){cleaned=true;setTrashSvg();tip.textContent=item.tip+' 이제 알맞은 통으로 옮겨 주세요!';}else{finish(false);}return;}
+ if(z===item.answer){finish(true);}else if(z==='sink'){tip.textContent='깨끗해졌어요! 이제 알맞은 쓰레기통을 찾아보세요.';}else{finish(false);}
 });
-
-trash.addEventListener("pointermove", function(event) {
-    if (!dragging || gameOver) return;
-
-    event.preventDefault();
-
-    const rect = stage.getBoundingClientRect();
-
-    let x = event.clientX - rect.left - offsetX;
-    let y = event.clientY - rect.top - offsetY;
-
-    x = Math.max(0, Math.min(rect.width - trash.offsetWidth, x));
-    y = Math.max(0, Math.min(rect.height - trash.offsetHeight, y));
-
-    trash.style.left = x + "px";
-    trash.style.top = y + "px";
-    trash.style.transform = "none";
-
-    // 현재 놓을 수 있는 싱크대나 쓰레기통을 강조해요.
-    document.querySelectorAll("[data-zone]").forEach(function(el) {
-        el.classList.remove("drag-over");
-    });
-
-    const zone = getDropZone(event.clientX, event.clientY);
-
-    if (zone) {
-        const target = document.querySelector(
-            '[data-zone="' + zone + '"]'
-        );
-        if (target) target.classList.add("drag-over");
-    }
-});
-
-function endDrag(event) {
-    if (!dragging) return;
-
-    dragging = false;
-    trash.classList.remove("dragging");
-
-    document.querySelectorAll("[data-zone]").forEach(function(el) {
-        el.classList.remove("drag-over");
-    });
-
-    // 손을 뗀 좌표를 사용해 정확히 판정해요.
-    const zone = getDropZone(event.clientX, event.clientY);
-
-    if (zone) {
-        handleDrop(zone);
-    } else {
-        // 목표 영역 밖이면 원래 위치로 돌아가요.
-        trash.style.left = "61%";
-        trash.style.top = "37%";
-        trash.style.transform = "translate(-50%,-50%)";
-    }
-}
-
-trash.addEventListener("pointerup", endDrag);
-
-trash.addEventListener("pointercancel", function() {
-    dragging = false;
-    trash.classList.remove("dragging");
-
-    document.querySelectorAll("[data-zone]").forEach(function(el) {
-        el.classList.remove("drag-over");
-    });
-});
-
-// ==========================================
-// 10. 버튼 이벤트
-// ==========================================
-
-startButton.addEventListener("click", startGame);
-homeButton.addEventListener("click", showStartScreen);
-
-// 처음에는 시작 화면을 보여 줘요.
-showStartScreen();
-</script>
-</body>
-</html>
-"""
-
-# ==========================================
-# 3. Streamlit에 게임 표시
-# ==========================================
-components.html(
-    html,
-    height=810,
-    scrolling=True,
-)
