@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="알록달록! 쓰레기 분류 게임", page_icon="🩷", layout="wide")
 
-html = r"""
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
