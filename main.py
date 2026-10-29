@@ -95,3 +95,7 @@ HTML_B64 = (
     "MTEwIj48cGF0aCBkPSJNOSAyN0wxNSAxNkg2NEw3MCAyN0w2NiA5NFE0MCAxMDUgMTQgOTRaIiBmaWxsPSIjZmZiOTI4IiBzdHJv"
     "a2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiLz48cGF0aCBkPSJNMTQgMzhINjVMNjIgODRIMTdaIiBmaWxsPSIjZmZmMWE0Ii8+"
 )
+
+
+html = base64.b64decode(HTML_B64).decode("utf-8")
+components.html(html, height=1120, scrolling=True)
